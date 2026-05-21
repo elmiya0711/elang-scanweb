@@ -1,120 +1,59 @@
 import requests
 from bs4 import BeautifulSoup
-import re
-import sys
 import socket
+import datetime
 
-def scan_site(target_url):
-    # Validasi ketat: Pastikan input adalah string
-    if not isinstance(target_url, str):
-        print(f"CRITICAL ERROR: Input bukan string. Tipe: {type(target_url)}")
-        print("Jalankan skrip dengan: python3 scan_website.py <domain>")
-        return
-
-    # Bersihkan input
-    target_url = target_url.strip()
-    if not target_url:
-        print("Error: Domain kosong.")
-        return
-
-    # Tambahkan protokol jika belum ada
-    if not target_url.startswith(('http://', 'https://')):
-        target_url = 'https://' + target_url
-
-    # Ekstrak domain
-    domain = target_url.replace('http://', '').replace('https://', '').split('/')
-    
-    detected_cms = []
-    is_cloudflare = False
-    
+def scan_web(url):
     try:
-        # 1. Resolusi IP
+        # Mengambil informasi waktu
+        waktu_sekarang = datetime.datetime.now()
+        print(f"Informasi Waktu: {waktu_sekarang}")
+
+        # Mengambil informasi IP
+        domain = url.replace("http://", "").replace("https://", "")
         ip_address = socket.gethostbyname(domain)
-        
-        # 2. Request HTTP
-        headers = {'User-Agent': 'Mozilla/5.0'}
-        response = requests.get(target_url, headers=headers, timeout=10)
+        print(f"Informasi IP: {ip_address}")
+
+        # Mengambil informasi header
+        response = requests.get(url)
+        headers = response.headers
+        print("\nInformasi Header:")
+        for key, value in headers.items():
+            print(f"{key}: {value}")
+
+        # Mengambil informasi DNS
+        print(f"\nInformasi DNS: {domain} -> {ip_address}")
+
+        # Mengambil informasi Cloudflare
+        if 'cloudflare' in str(headers).lower():
+            print("\nInformasi Cloudflare: Terproteksi")
+        else:
+            print("\nInformasi Cloudflare: Tidak terproteksi")
+
+        # Mengambil informasi CMS
+        cms_list = ['wordpress', 'joomla', 'drupal', 'magento']
+        cms_detected = False
+        for cms in cms_list:
+            if cms in str(response.text).lower():
+                print(f"\nInformasi CMS: {cms.capitalize()}")
+                cms_detected = True
+                break
+        if not cms_detected:
+            print("\nInformasi CMS: Tidak terdeteksi")
+
+        # Mengambil informasi HTML
         soup = BeautifulSoup(response.text, 'html.parser')
-        
-        # --- Deteksi Cloudflare ---
-        server_header = response.headers.get('Server', '').lower()
-        cf_ray = response.headers.get('CF-RAY')
-        cf_cookie = response.cookies.get('cf_clearance')
-        
-        if 'cloudflare' in server_header or cf_ray or cf_cookie:
-            is_cloudflare = True
-        # --- Akhir Deteksi Cloudflare ---
+        print("\nInformasi HTML:")
+        print(soup.title.text)
 
-        # Pola deteksi CMS
-        cms_patterns = {
-            'WordPress': [r'wp-content', r'wp-includes', r'wordpress', r'wp-json'],
-            'Joomla': [r'joomla', r'com_content', r'joomla-session'],
-            'Drupal': [r'drupal', r'Drupal\.settings', r'drupal-settings'],
-            'Shopify': [r'shopify', r'cdn\.shopify\.com'],
-            'Wix': [r'wix\.com', r'wix\.studio'],
-            'Magento': [r'magento', r'magento2']
-        }
+        # Mengambil informasi meta tag
+        meta_tags = soup.find_all('meta')
+        print("\nInformasi Meta Tag:")
+        for tag in meta_tags:
+            print(f"{tag.get('name')}: {tag.get('content')}")
 
-        # Cek di Header, Body, dan Cookie
-        html_content = str(soup) + str(response.headers) + str(response.cookies)
-        
-        for cms, patterns in cms_patterns.items():
-            for pattern in patterns:
-                if re.search(pattern, html_content, re.IGNORECASE):
-                    if cms not in detected_cms:
-                        detected_cms.append(cms)
-                    break
-
-        print(f"--- Hasil Scan: {target_url} ---")
-        print(f"Status Code: {response.status_code}")
-        
-        print("\n[Informasi Jaringan]")
-        print(f"Domain: {domain}")
-        print(f"IP Address: {ip_address}")
-
-        print("\n[Keamanan & CDN]")
-        if is_cloudflare:
-            print("• Cloudflare: Terdeteksi (Aktif)")
-            if cf_ray:
-                print(f"  - Ray ID: {cf_ray}")
-        else:
-            print("• Cloudflare: Tidak terdeteksi")
-
-        print("\n[Web Server]")
-        print(f"Server: {response.headers.get('Server', 'Tidak terdeteksi')}")
-        print(f"X-Powered-By: {response.headers.get('X-Powered-By', 'Tidak terdeteksi')}")
-
-        print("\n[Deteksi CMS]")
-        if detected_cms:
-            for cms in detected_cms:
-                print(f"• {cms}")
-        else:
-            print("• Tidak ada CMS umum yang terdeteksi.")
-            
-        print("\n[Judul Halaman]")
-        title = soup.title.string if soup.title else "Tidak ada judul"
-        print(f"• {title}")
-
-    except socket.gaierror:
-        print(f"Error: Domain '{domain}' tidak dapat ditemukan.")
-    except requests.exceptions.RequestException as e:
-        print(f"Error koneksi: {e}")
     except Exception as e:
-        print(f"Terjadi kesalahan tak terduga: {e}")
+        print(f"Error: {e}")
 
-if __name__ == "__main__":
-    # Validasi jumlah argumen
-    if len(sys.argv) != 2:
-        print("Penggunaan: python3 scan_website.py <alamat_website>")
-        print("Contoh: python3 scan_website.py lemaanyilmedo.org")
-        sys.exit(1)
-    
-    # Ambil argumen secara eksplisit
-    target = sys.argv
-    
-    # Pastikan target adalah string (seharusnya sudah, tapi untuk keamanan)
-    if isinstance(target, list):
-        # Jika secara ajaib menjadi list, ambil elemen pertama
-        target = target
-    
-    scan_site(target)
+url = input("Masukkan URL: ")
+scan_web(url)
