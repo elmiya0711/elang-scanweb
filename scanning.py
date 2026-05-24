@@ -53,13 +53,20 @@ def scan_web(url):
         # Mengambil informasi HTML
         soup = BeautifulSoup(response.text, 'html.parser')
         print("\nHTML:")
-        print(soup.title.text)
+        print(soup.title.text if soup.title else "Tidak ada judul")
 
         # Mengambil informasi meta tag
         meta_tags = soup.find_all('meta')
         print("\nMeta Tag:")
         for tag in meta_tags:
-            print(f"{tag.get('name')}: {tag.get('content')}")
+            name = tag.get('name')
+            content = tag.get('content')
+            if name and content:
+                print(f"{name}: {content}")
+            elif name:
+                print(f"{name}: Tidak ada konten")
+            elif content:
+                print(f"Tidak ada nama: {content}")
     except Exception as e:
         print(f"Error: {e}")
 
