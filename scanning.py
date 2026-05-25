@@ -2,6 +2,7 @@ import requests
 from bs4 import BeautifulSoup
 import socket
 import datetime
+import ipapi
 
 def scan_web(url):
     try:
@@ -12,6 +13,10 @@ def scan_web(url):
         domain = url.replace("http://", "").replace("https://", "")
         ip_address = socket.gethostbyname(domain)
         print(f"IP: {ip_address}")
+
+        # Mengambil informasi ISP
+        isp_info = ipapi.location(ip_address)
+        print(f"ISP: {isp_info['org']}")
 
         # Mengambil informasi Status Website
         response = requests.get(url)
@@ -30,9 +35,9 @@ def scan_web(url):
         # Mengambil informasi Cloudflare
         headers = response.headers
         if 'cloudflare' in str(headers).lower():
-            print("Cloudflare: Terproteksi")
+            print("Cloudflare: Protected")
         else:
-            print("Cloudflare: Tidak terproteksi")
+            print("Cloudflare: Unprotected")
 
         # Mengambil informasi CMS
         cms_list = ['wordpress', 'joomla', 'drupal', 'magento']
@@ -43,7 +48,7 @@ def scan_web(url):
                 cms_detected = True
                 break
         if not cms_detected:
-            print("CMS: Tidak terdeteksi")
+            print("CMS: Not detected")
 
         # Mengambil informasi Header
         print("\nHeader:")
@@ -53,7 +58,7 @@ def scan_web(url):
         # Mengambil informasi HTML
         soup = BeautifulSoup(response.text, 'html.parser')
         print("\nHTML:")
-        print(soup.title.text if soup.title else "Tidak ada judul")
+        print(soup.title.text if soup.title else "No header")
 
         # Mengambil informasi meta tag
         meta_tags = soup.find_all('meta')
@@ -64,9 +69,9 @@ def scan_web(url):
             if name and content:
                 print(f"{name}: {content}")
             elif name:
-                print(f"{name}: Tidak ada konten")
+                print(f"{name}: No content")
             elif content:
-                print(f"Tidak ada nama: {content}")
+                print(f"No name: {content}")
     except Exception as e:
         print(f"Error: {e}")
 
