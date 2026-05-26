@@ -49,6 +49,9 @@ def scan_web(url):
                 break
         if not cms_detected:
             print("CMS: Not detected")
+        # Mengambil informasi Server
+        server = headers.get('Server')
+        print(f"Server: {server if server else 'Not detected'}")
         # Mengambil informasi Header
         print("\nHeader:")
         for key, value in headers.items():
