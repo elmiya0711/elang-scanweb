@@ -4,20 +4,23 @@ import socket
 import datetime
 import ipapi
 
+def tambah_skema(url):
+    if not url.startswith('http'):
+        url = 'https://' + url
+    return url
+
 def scan_web(url):
     try:
+        url = tambah_skema(url)
         # Mengambil informasi URL
         print(f"URL: {url}")
-
         # Mengambil informasi IP
         domain = url.replace("http://", "").replace("https://", "")
         ip_address = socket.gethostbyname(domain)
         print(f"IP: {ip_address}")
-
         # Mengambil informasi ISP
         isp_info = ipapi.location(ip_address)
         print(f"ISP: {isp_info['org']}")
-
         # Mengambil informasi Status Website
         response = requests.get(url)
         if response.status_code == 200:
@@ -28,17 +31,14 @@ def scan_web(url):
             print(f"Status: Internal Server Error ({response.status_code})")
         else:
             print(f"Status: {response.status_code}")
-
         # Mengambil informasi DNS
         print(f"DNS: {domain} -> {ip_address}")
-
         # Mengambil informasi Cloudflare
         headers = response.headers
         if 'cloudflare' in str(headers).lower():
             print("Cloudflare: Protected")
         else:
             print("Cloudflare: Unprotected")
-
         # Mengambil informasi CMS
         cms_list = ['wordpress', 'joomla', 'drupal', 'magento']
         cms_detected = False
@@ -49,17 +49,14 @@ def scan_web(url):
                 break
         if not cms_detected:
             print("CMS: Not detected")
-
         # Mengambil informasi Header
         print("\nHeader:")
         for key, value in headers.items():
             print(f"{key}: {value}")
-
         # Mengambil informasi HTML
         soup = BeautifulSoup(response.text, 'html.parser')
         print("\nHTML:")
         print(soup.title.text if soup.title else "No header")
-
         # Mengambil informasi meta tag
         meta_tags = soup.find_all('meta')
         print("\nMeta Tag:")
